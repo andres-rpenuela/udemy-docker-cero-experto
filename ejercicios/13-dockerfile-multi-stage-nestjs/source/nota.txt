@@ -1,0 +1,11 @@
+Nota Importante
+En la siguiente clase haremos uso de una aplicación de Nestjs creada en otro curso que estará en el material adjunto.
+
+
+Luego de descargarlo se recomienda modificar el archivo package.json del proyecto y eliminar todos los "^" de las dependencias.
+
+
+Esto es para hacer la instalación de las dependencias con las versiones exactas y evitar algunos errores de incompatibilidad entre ellas que nos han reportado.
+
+
+En el docker file falto poner: `RUN yarn install --pro --frozen-lockfile` en "FROM node:19-alpine3.15 as prod-deps"

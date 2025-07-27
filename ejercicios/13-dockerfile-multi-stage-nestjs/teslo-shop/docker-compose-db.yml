@@ -1,0 +1,30 @@
+#version: '3'
+# docker compose up -d
+# docker compose down
+# docker compose down --volumes
+
+# Esto ejecuta el contexto defindio
+# 1º Generar la build hasta un stage especifico: docker compose build
+# 2º Ejecutar el docker compose: docker compose up -d
+# 3º Limpiar todo hasta los volumes: docker compose down --volumes
+
+# Ejecutar un docker compose con otro nombre
+# 1º docker compose -f docker-compose-db.yml build # No hace falta porque no construye nada (no usa dockerfile)
+# 2º docker compose -f docker-compose-db.yml up  (o) docker compose -fdocker-compose-db.yml up -d
+# 
+services:
+  db:
+    image: postgres:14.3
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    container_name: ${DB_NAME}
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+
+volumes:
+  postgres-db:
+    external: false

@@ -1,0 +1,46 @@
+version: '3'
+
+# Crea una aplicacion de multiples contenedores, lo que no hace falta una red para comunicarse
+services:
+  db:
+    container_name: postgres-database
+    image: postgres:15.1
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=123456
+
+  pgAdmin:
+    depends_on:
+      - db
+    image: dpage/pgadmin4:6.17
+    ports:
+      - "8080:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=superman@google.com
+      - PGADMIN_DEFAULT_PASSWORD=123456
+
+# Gestio de volumen por nombre
+volumes:
+  postgres-db:
+
+#volumes:
+#  postgres-db:
+#    external: true
+
+
+# Si se usa opcion a, crea o reutliza `#local     05-postgres-pgadmin_postgres-db`
+# Si no reuliza el existente `#local     postgres-d`
+#```bash
+#erto$ docker volume ls
+#DRIVER    VOLUME NAME
+#local     05-postgres-pgadmin_postgres-db
+#local     012f8a057907f9000ec014827955ebee524ca998684d818c6548166748d4e8e6
+#local     7114d42ecaf3c2a5b7e58e75fa892ce758260409bc5de0f8c2f4743c797015a9
+#local     b01e7ec13c855fdf800f43f93dc5899dc9feb7030e496440dc268360452d995f
+#local     postgres-db
+#```` 
+
+# Ejecutar
+# cd mnt/c/Users/andre/Documents/Angular-Docker-Cero-Experto/doc/ejercicios/05-postgres-pgadmin
+# docker compose up

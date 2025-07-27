@@ -1,0 +1,55 @@
+# Despliegue de pgAdmin (gestor visual de PostgreSQL)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pg-admin-deployment
+  labels:
+    app: pg-admin  # etiqueta usada por el Service para conectarse
+spec:
+  replicas: 1  # Número de pods de pgAdmin
+  selector:
+    matchLabels:
+      app: pg-admin  # debe coincidir con las etiquetas del pod
+  template:
+    metadata:
+      labels:
+        app: pg-admin
+    spec:
+      containers:
+        - name: pg-admin
+          image: dpage/pgadmin4:6.17  # Imagen oficial de pgAdmin
+          ports:
+            - containerPort: 80  # Puerto interno del contenedor
+          env:
+            # Correo de usuario por defecto (desde Secret)
+            - name: PGADMIN_DEFAULT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: pg-admin-secrets  # nombre del Secret
+                  key: DB_USER_EMAIL      # clave dentro del Secret
+
+            # Contraseña del usuario (desde Secret)
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-admin-secrets
+                  key: DB_PASSWORD
+
+            # Desactiva la protección de cookies (para evitar error Python)
+            - name: PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION
+              value: "False"  # debe estar capitalizado
+---
+# Servicio para exponer pgAdmin desde fuera del clúster
+apiVersion: v1
+kind: Service
+metadata:
+  name: pg-admin-service
+spec:
+  type: NodePort  # Accesible desde fuera del clúster en localhost
+  selector:
+    app: pg-admin  # conecta con el pod usando esta etiqueta
+  ports:
+    - protocol: TCP
+      port: 80          # Puerto dentro del clúster
+      targetPort: 80    # Puerto del contenedor
+      nodePort: 30200   # Puerto accesible en http://localhost:30200

@@ -1,0 +1,57 @@
+#version: "3"
+
+# Para usar las variables de entorno, basta con ${key}
+services:
+  # conexion don tableplus: url= mongodb://localhost:27017 (Sin envrioment)
+  # conexion don tableplus: url= mongodb://mongoadmin:secret@localhost:27017
+  mongo-db:
+#   container_name: mongo_db
+    container_name: ${MONG_DB_NAME}
+    image: mongo:6.0
+    volumes:
+      - poke-vol:/data/db
+# comentar si no se quiere coenctar con tableplus u otro gestor de base de datos externo a la red
+#    ports:
+#      - 27017:27017
+    restart: always
+    environment:
+#      - MONGO_INITDB_ROOT_USERNAME=mongoadmin
+#      - MONGO_INITDB_ROOT_PASSWORD=secret
+      - MONGO_INITDB_ROOT_USERNAME=${MONG_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONG_PASSWORD}
+    command: ['--auth']
+
+  mongo-express:
+    depends_on:
+      - mongo-db
+    container_name: mongo-express
+    image: mongo-express:1.0.0-alpha.4
+    ports:
+      - 8082:8081
+    environment: # user, pwd y name_Bd, de mongodb a conectar
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONG_USERNAME}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONG_PASSWORD}
+      - ME_CONFIG_MONGODB_SERVER=${MONG_DB_NAME}
+    restart: always
+
+# https://hub.docker.com/r/klerith/pokemon-nest-app
+  poke-app:
+    depends_on:
+      - mongo-db
+      - mongo-express
+    container_name: pokemon-nest
+    image: klerith/pokemon-nest-app:1.0.0
+    ports:
+      - 4200:3000
+    environment: # user, pwd y name_Bd, de mongodb a conectar
+      - MONGODB=mongodb://${MONG_USERNAME}:${MONG_PASSWORD}@${MONG_DB_NAME}:27017
+      - DB_NAME=${MONG_DB_NAME}
+    restart: always
+
+
+volumes:   
+  poke-vol:
+    external: false
+
+
+# resolucion: 07-multi-container-app_poke-vol

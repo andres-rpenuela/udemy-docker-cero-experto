@@ -1,0 +1,79 @@
+# Despliegue de pgAdmin (gestor visual de PostgreSQL)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend  # etiqueta usada por el Service para conectarse
+spec:
+  replicas: 3  # Número de pods de pgAdmin
+  selector:
+    matchLabels:
+      app: backend  # debe coincidir con las etiquetas del pod
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: klerith/k8s-teslo-backend:1.1.0  # Imagen oficial de pgAdmin
+          ports:
+            - containerPort: 3000  # Puerto interno del contenedor
+          env:
+            # Correo de usuario por defecto (desde Secret)
+            - name: APP_VERSION
+              value: "1.1.0"
+            - name: PORT
+              value: "3000" # mismo que containerPort
+            - name: STAGE
+              value: "prod"
+
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config  # nombre del ConfigMap: metadata.name
+                  key: DB_NAME      # clave dentro del COnfig Map
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config  # nombre del ConfigMap: metadata.name
+                  key: DB_HOST      # clave dentro del COnfig Map
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config  # nombre del ConfigMap: metadata.name
+                  key: DB_PORT      # clave dentro del COnfig Map
+
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets  # nombre del Secret
+                  key: DB_USER      # clave dentro del Secret
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets  # nombre del Secret
+                  key: DB_PASSWORD      # clave dentro del Secret
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets  # nombre del Secret
+                  key: SEE      # clave dentro del Secret
+
+---
+# Servicio para exponer pgAdmin desde fuera del clúster
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  type: NodePort  # Accesible desde fuera del clúster en localhost
+  selector:
+    app: backend  # conecta con el pod usando esta etiqueta
+  ports:
+    - protocol: TCP
+      port: 3000          # Puerto dentro del clúster
+      targetPort: 3000    # Puerto del contenedor
+      nodePort: 30300   # Puerto accesible en http://localhost:330300

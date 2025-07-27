@@ -1,0 +1,68 @@
+# TODO tarea
+
+#version: '3'
+# docker compose up -d
+# docker compose down
+# docker compose down --volumes
+
+# Esto ejecuta el contexto defindio
+# 1º Generar la build hasta un stage especifico: docker compose build
+# 2º Ejecutar el docker compose: docker compose up -d
+# 3º Limpiar todo hasta los volumes: docker compose down --volumes
+
+# Ejecutar un docker compose con otro nombre
+# 1º docker compose -f docker-compose-pro.yml build 
+# 2º docker compose -f docker-compose-pro.yml up  (o) docker compose -fdocker-compose-pro.yml up -d
+# 
+services:
+  db:
+    image: postgres:14.3
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    container_name: ${DB_NAME}
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+  
+  # Contenedor para la aplicacion
+  app:
+    depends_on:
+      - db
+    build:
+      # Busca donde esta el dockerfile (por defecto, dondo esta en docker.compose.yml)
+      context: .
+      # hasta que stage del Dockerfile ejecutar (si no se pone, ejecuta todo)
+      target: dev
+      dockerfile: Dockerfile
+    # Comando a lanzar cuadno se genere la imagen
+    #command: yarn start:dev
+
+    volumes:
+      - .:/app/                 # Comparte tu proyecto al contenedor
+      - /app/node_modules       # Protege las dependencias del contenedor
+
+    container_name: nest-app
+    # Le del fichero .evn
+    ports:
+      - ${PORT}:${PORT}
+    # Carga las variables de entorno definidas en el .env, al contendor
+    environment:
+      APP_VERSION: ${APP_VERSION}
+      STAGE: ${STAGE}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USERNAME: ${DB_USERNAME}
+      PORT: ${PORT}
+      HOST_API: ${HOST_API}
+      JWT_SECRET: ${JWT_SECRET}
+
+
+
+volumes:
+  postgres-db:
+    external: false
