@@ -254,4 +254,165 @@ services:
 
 ---
 
-¿Quieres que te revise o corrija tu `docker-compose.yml` actual según esto?
+Excelente observación 🔍 — esa es una duda muy común cuando se mezclan **`env_file`**, **variables en `environment:`**, y **sustitución de variables** (`${VAR}`) dentro de un `docker-compose.yml`.
+
+Vamos a desglosarlo con precisión 👇
+
+---
+
+## 🧩 Prioridades y comportamiento real de Docker Compose con las vairables de Entorno
+
+Cuando usas algo como esto:
+
+* Ficheros de entorno general + profiles
+```properties
+# .env
+# Archivo .env
+MYSQL_ROOT_PASSWORD=root
+MYSQL_DATABASE=appdb
+MYSQL_USER=appuser
+MYSQL_PASSWORD=apppass
+
+# Selecciona el perfil (dev, test, prod)
+PROFILE=dev
+
+# Puerto por defecto (puede cambiar en los perfiles)
+MYSQL_PORT=3306
+-----
+# profiles/dev.env
+MYSQL_DATABASE=dev_db
+MYSQL_USER=dev_user
+MYSQL_PASSWORD=dev_pass
+MYSQL_PORT=3307
+
+-----
+# profiles/test.env
+MYSQL_DATABASE=test_db
+MYSQL_USER=test_user
+MYSQL_PASSWORD=test_pass
+MYSQL_PORT=3308
+
+-----
+# profiles/prod.env
+MYSQL_DATABASE=prod_db
+MYSQL_USER=prod_user
+MYSQL_PASSWORD=SuperSecret123
+MYSQL_PORT=3306
+```
+
+* Fragmento de carga de las variables de entorno:
+  
+```yaml
+env_file:
+  - .env
+  - ./profiles/${PROFILE}.env
+environment:
+  - MYSQL_TCP_PORT=${MYSQL_PORT}
+```
+
+Docker Compose **fusiona todas las fuentes de variables de entorno**, pero con **prioridad de sobrescritura**.
+
+### 🔢 Orden de precedencia (de menor a mayor prioridad)
+
+1. **Valores definidos en la imagen (Dockerfile → `ENV`)**
+   Ejemplo:
+
+   ```dockerfile
+   ENV MYSQL_DATABASE=default_db
+   ```
+
+2. **Variables definidas en `env_file:`**
+   Ejemplo: `.env`, `profiles/dev.env`, etc.
+
+3. **Variables declaradas directamente en `environment:` dentro del servicio**
+   (Estas *siempre sobrescriben* las de `env_file`).
+
+4. **Variables del entorno del *host*** (si no se definen en los pasos anteriores).
+   Ejemplo: si en tu terminal tienes `export MYSQL_PORT=3307`, también se usa.
+
+---
+
+### 🧠 Qué pasa en el caso
+
+En tu `docker-compose.yml`:
+
+```yaml
+env_file:
+  - .env
+  - ./profiles/${PROFILE}.env
+environment:
+  - MYSQL_TCP_PORT=${MYSQL_PORT}
+```
+
+### 🔹 Cómo se interpretan las variables:
+
+1. Docker Compose primero carga `.env` (que define `PROFILE`, `MYSQL_PORT`, etc.).
+2. Luego evalúa `${PROFILE}` → y carga `./profiles/dev.env` (u otro perfil).
+3. Luego, en la sección `environment:`, la línea `MYSQL_TCP_PORT=${MYSQL_PORT}`
+   se **expande usando la última versión cargada de `${MYSQL_PORT}`** (por perfil).
+4. Finalmente, todas las demás variables (`MYSQL_USER`, `MYSQL_PASSWORD`, etc.) se pasan desde los `env_file`.
+
+👉 Resultado final: **todas las variables definidas en los `env_file` estarán disponibles dentro del contenedor**, y **solo las que pongas explícitamente en `environment:` se sobrescriben o complementan**.
+
+---
+
+### ✅ Ejemplo concreto
+
+### .env
+
+```bash
+PROFILE=dev
+MYSQL_PORT=3306
+MYSQL_USER=base_user
+```
+
+### profiles/dev.env
+
+```bash
+MYSQL_DATABASE=dev_db
+MYSQL_USER=dev_user
+MYSQL_PASSWORD=dev_pass
+MYSQL_PORT=3307
+```
+
+### docker-compose.yml
+
+```yaml
+env_file:
+  - .env
+  - ./profiles/${PROFILE}.env
+environment:
+  - MYSQL_TCP_PORT=${MYSQL_PORT}
+```
+
+### Resultado dentro del contenedor:
+
+| Variable       | Valor final                                  |
+| -------------- | -------------------------------------------- |
+| MYSQL_DATABASE | `dev_db`                                     |
+| MYSQL_USER     | `dev_user`                                   |
+| MYSQL_PASSWORD | `dev_pass`                                   |
+| MYSQL_PORT     | `3307`                                       |
+| MYSQL_TCP_PORT | `3307` (definido manualmente en environment) |
+
+---
+
+## ⚠️ Recomendación
+
+No repitas todas las variables en `environment:` —
+solo coloca ahí las que necesiten **ser mapeadas dinámicamente** (como `MYSQL_TCP_PORT`),
+o las que dependan de **expresiones** (`${PROFILE}`, `${MYSQL_PORT}`, etc.).
+
+Ejemplo ideal:
+
+```yaml
+env_file:
+  - .env
+  - ./profiles/${PROFILE}.env
+environment:
+  MYSQL_TCP_PORT: ${MYSQL_PORT}
+```
+
+---
+
+
