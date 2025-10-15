@@ -330,8 +330,6 @@ Docker Compose **fusiona todas las fuentes de variables de entorno**, pero con *
 4. **Variables del entorno del *host*** (si no se definen en los pasos anteriores).
    Ejemplo: si en tu terminal tienes `export MYSQL_PORT=3307`, también se usa.
 
----
-
 ### 🧠 Qué pasa en el caso
 
 En tu `docker-compose.yml`:
@@ -353,8 +351,6 @@ environment:
 4. Finalmente, todas las demás variables (`MYSQL_USER`, `MYSQL_PASSWORD`, etc.) se pasan desde los `env_file`.
 
 👉 Resultado final: **todas las variables definidas en los `env_file` estarán disponibles dentro del contenedor**, y **solo las que pongas explícitamente en `environment:` se sobrescriben o complementan**.
-
----
 
 ### ✅ Ejemplo concreto
 
@@ -395,7 +391,6 @@ environment:
 | MYSQL_PORT     | `3307`                                       |
 | MYSQL_TCP_PORT | `3307` (definido manualmente en environment) |
 
----
 
 ## ⚠️ Recomendación
 
